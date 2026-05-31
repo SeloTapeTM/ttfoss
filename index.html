@@ -111,6 +111,45 @@
   --progress-bg: #2a2a2e;
   --hr: #2a2a2e;
 }
+[data-theme="synthwave"] {
+  color-scheme: dark;
+  --bg: #0d0821;
+  --fg: #f0e6ff;
+  --muted: #9d7fb5;
+  --card-bg: #160d2a;
+  --card-border: #3d1f6b;
+  --input-bg: #1f0f35;
+  --input-border: #6b2fa0;
+  --input-fg: #f0e6ff;
+  --code-bg: #2a1045;
+  --accent: #ff2d78;
+  --accent-hover: #00f5ff;
+  --btn-secondary-bg: #2a1045;
+  --btn-secondary-hover: #3d1f6b;
+  --banner-warn-bg: #2a1a00;
+  --banner-warn-border: #ff8c00;
+  --banner-warn-fg: #ffd700;
+  --banner-ok-bg: #001a2e;
+  --banner-ok-border: #00f5ff;
+  --banner-ok-fg: #7fffff;
+  --banner-err-bg: #2a0018;
+  --banner-err-border: #ff2d78;
+  --banner-err-fg: #ff9ec4;
+  --progress-bg: #2a1045;
+  --hr: #3d1f6b;
+}
+[data-theme="synthwave"] body { background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(100,0,200,0.03) 2px, rgba(100,0,200,0.03) 4px); }
+[data-theme="synthwave"] h1 { text-shadow: 0 0 18px rgba(255,45,120,0.7), 0 0 36px rgba(0,245,255,0.3); }
+[data-theme="synthwave"] .btn-primary { box-shadow: 0 0 12px rgba(255,45,120,0.5); }
+[data-theme="synthwave"] .btn-primary:hover:not(:disabled) { background: var(--accent-hover); color: #0d0821; box-shadow: 0 0 18px rgba(0,245,255,0.7); }
+[data-theme="synthwave"] .card { box-shadow: 0 0 20px rgba(100,0,200,0.2), inset 0 0 40px rgba(100,0,200,0.04); }
+[data-theme="synthwave"] .theme-toggle { box-shadow: 0 0 8px rgba(255,45,120,0.4); }
+#eggTrigger { cursor: default; user-select: none; opacity: 0.12; font-size: 9px; vertical-align: middle; transition: opacity 0.5s, text-shadow 0.5s; }
+[data-theme="synthwave"] #eggTrigger { opacity: 1; text-shadow: 0 0 6px #ff2d78, 0 0 14px #ff2d78; animation: eggPulse 2.5s ease-in-out infinite; }
+@keyframes eggPulse {
+  0%, 100% { text-shadow: 0 0 6px #ff2d78, 0 0 14px #ff2d78; }
+  50% { text-shadow: 0 0 10px #00f5ff, 0 0 22px #00f5ff; }
+}
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--fg); transition: background 0.2s, color 0.2s; margin: 0 auto; padding: 24px; max-width: 760px; }
 h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px 0; }
@@ -224,7 +263,7 @@ details ul { padding-left: 18px; }
       <li><b>lamejs (breezystack fork)</b> -- <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target="_blank" rel="noopener">LGPL-3.0-or-later</a>. Author Alex Zhukov and contributors. <b>BUNDLED</b> here as the file <code>lamejs.iife.js</code>, shipped unmodified. <a href="https://github.com/breezystack/lamejs" target="_blank" rel="noopener">Source</a>. See <code>LICENSE.lamejs</code> for the LGPL terms. You may replace <code>lamejs.iife.js</code> with a newer version of the same library without modifying the rest of this app.</li>
     </ul>
     <p><b>Modifications:</b> This file is a derivative work providing a UI around kokoro-js. kokoro-js, lamejs, and the Kokoro-82M weights are unmodified.</p>
-    <p><b>Disclaimer:</b> Distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.</p>
+    <p><b>Disclaimer:</b> Distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND. <span id="eggTrigger" aria-hidden="true">✦</span></p>
   </details>
 </div>
 
@@ -239,22 +278,38 @@ details ul { padding-left: 18px; }
 <!-- LGPL-3.0-or-later: bundled lamejs MP3 encoder, loaded unmodified from a local file. -->
 <script src="lamejs.iife.js"></script>
 <script type="module">
-// Dark-mode toggle
+// Theme toggle — cycles light → dark → synthwave (unlocked via Easter egg) → light
 (function() {
   var btn = document.getElementById('themeToggle');
+  var unlocked = false;
+  try { unlocked = localStorage.getItem('tts-egg') === '1'; } catch(e) {}
+
   function setIcon() {
     var t = document.documentElement.getAttribute('data-theme');
-    btn.textContent = t === 'dark' ? '☀️' : '🌙';
-    btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    btn.textContent = t === 'synthwave' ? '✦' : t === 'dark' ? '☀️' : '🌙';
+    btn.setAttribute('aria-label', 'Toggle theme');
   }
   setIcon();
+
   btn.addEventListener('click', function() {
     var cur = document.documentElement.getAttribute('data-theme');
-    var next = cur === 'dark' ? 'light' : 'dark';
+    var seq = unlocked ? ['light', 'dark', 'synthwave'] : ['light', 'dark'];
+    var next = seq[(seq.indexOf(cur) + 1) % seq.length];
     document.documentElement.setAttribute('data-theme', next);
-    try { localStorage.setItem('tts-theme', next); } catch (e) {}
+    try { localStorage.setItem('tts-theme', next); } catch(e) {}
     setIcon();
   });
+
+  var egg = document.getElementById('eggTrigger');
+  if (egg) {
+    egg.addEventListener('click', function() {
+      unlocked = true;
+      try { localStorage.setItem('tts-egg', '1'); } catch(e) {}
+      document.documentElement.setAttribute('data-theme', 'synthwave');
+      try { localStorage.setItem('tts-theme', 'synthwave'); } catch(e) {}
+      setIcon();
+    });
+  }
 })();
 
 const banner = document.getElementById('banner');
