@@ -1,0 +1,112 @@
+Local Neural TTS Web App
+Copyright 2026 Omer Daniel <omer.daniel@solaredge.com>
+
+This product includes software developed as a wrapper around the third-party
+components listed below.
+
+================================================================================
+1. Kokoro-82M (neural TTS model weights) -- Apache-2.0
+================================================================================
+
+Copyright 2024-2025 hexgrad and Kokoro-82M contributors.
+
+Licensed under the Apache License, Version 2.0; see the accompanying LICENSE
+file or http://www.apache.org/licenses/LICENSE-2.0.
+
+Original model:
+    https://huggingface.co/hexgrad/Kokoro-82M
+
+ONNX redistribution used by this web app:
+    https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX
+
+The Kokoro-82M model weights are downloaded at runtime, unmodified, from the
+HuggingFace CDN. This web app does not redistribute the model weights.
+
+================================================================================
+2. kokoro-js (JavaScript inference library) -- Apache-2.0
+================================================================================
+
+Copyright 2024-2025 the kokoro-js authors.
+
+Licensed under the Apache License, Version 2.0. See LICENSE or
+http://www.apache.org/licenses/LICENSE-2.0.
+
+Source:
+    https://github.com/hexgrad/kokoro
+
+CDN used by this web app:
+    https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/dist/kokoro.web.js
+
+The kokoro-js library is loaded at runtime, unmodified, from the jsDelivr CDN.
+This web app does not redistribute the kokoro-js library.
+
+================================================================================
+3. lamejs (breezystack fork, MP3 encoder) -- LGPL-3.0-or-later   *** BUNDLED ***
+================================================================================
+
+Copyright Alex Zhukov and lamejs contributors.
+
+Licensed under the GNU Lesser General Public License, Version 3.0 or later.
+The full LGPL text is at:
+
+    https://www.gnu.org/licenses/lgpl-3.0.html
+
+and a local notice is provided in the accompanying LICENSE.lamejs file.
+
+This distribution INCLUDES the lamejs library as the separate file
+`lamejs.iife.js`, version 1.2.7, taken from:
+
+    https://www.npmjs.com/package/@breezystack/lamejs (version 1.2.7)
+    Tarball: https://registry.npmjs.org/@breezystack/lamejs/-/lamejs-1.2.7.tgz
+
+The bundled `lamejs.iife.js` is the file `dist/lamejs.iife.js` from that
+package, included verbatim. It is loaded by `index.html` via a relative
+<script src="lamejs.iife.js"> tag and is otherwise dynamically linked.
+
+Upstream sources of lamejs:
+    https://github.com/zhuker/lamejs        (original)
+    https://github.com/breezystack/lamejs   (maintained fork shipped here)
+
+You may obtain the corresponding source code at those URLs, or by fetching
+the same tarball above and running `tar xzf` on it. The library may be
+replaced with another LGPL-compatible build by overwriting `lamejs.iife.js`;
+the rest of this app does not need to change.
+
+NOTE on relicensing: the Apache-2.0 code of this web app and the LGPL-3.0
+lamejs library are distributed as SEPARATE FILES. lamejs is not statically
+linked into or modified by this app. Under LGPL Section 4, this form of
+distribution is permitted alongside Apache-2.0-licensed code.
+
+================================================================================
+4. Transitive dependencies of kokoro-js -- Apache-2.0
+================================================================================
+
+kokoro-js depends internally on Transformers.js and ONNX Runtime Web, which
+are loaded automatically by the library at runtime from their respective CDNs:
+
+  * Transformers.js -- Copyright Hugging Face Inc.
+    https://github.com/huggingface/transformers.js
+
+  * ONNX Runtime Web -- Copyright Microsoft Corporation and ONNX Runtime
+    contributors.
+    https://github.com/microsoft/onnxruntime
+
+================================================================================
+Modifications
+================================================================================
+
+This distribution consists of:
+
+  * index.html        -- Original work by Omer Daniel <omer.daniel@solaredge.com> (Apache License 2.0).
+                         A static HTML user interface.
+  * lamejs.iife.js    -- Verbatim copy of the lamejs library (LGPL-3.0-or-later),
+                         see section 3 above.
+  * LICENSE           -- Apache-2.0 full text.
+  * LICENSE.lamejs    -- LGPL-3.0 notice and pointers for the bundled lamejs.
+  * NOTICE            -- This file.
+  * README.md         -- Usage and license summary.
+  * INSTRUCTIONS.txt  -- Plain-text quick start.
+
+The Kokoro-82M model weights and the kokoro-js library are NOT bundled --
+they are loaded at runtime from public CDNs. The lamejs library IS bundled
+(unmodified) as `lamejs.iife.js`.

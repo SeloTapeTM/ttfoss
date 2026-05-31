@@ -1,0 +1,71 @@
+================================================================================
+  LICENSE NOTICE FOR THE BUNDLED FILE: lamejs.iife.js
+================================================================================
+
+The file `lamejs.iife.js` shipped alongside this web app is the JavaScript
+library "lamejs" (breezystack fork, version 1.2.7), an MP3 encoder.
+
+  Copyright: Alex Zhukov and lamejs contributors
+  Upstream:  https://github.com/zhuker/lamejs
+  Fork used: https://github.com/breezystack/lamejs
+  npm:       https://www.npmjs.com/package/@breezystack/lamejs
+  Version:   1.2.7
+
+The lamejs library is a JavaScript port of the LAME MP3 encoder
+(https://lame.sourceforge.net) and inherits its license:
+
+       GNU LESSER GENERAL PUBLIC LICENSE, Version 3.0 or later
+                            (LGPL-3.0-or-later)
+
+The full text of the LGPL-3.0 is available at:
+
+    https://www.gnu.org/licenses/lgpl-3.0.html
+
+The LGPL-3.0 incorporates the GNU General Public License, Version 3.0, by
+reference; that text is available at:
+
+    https://www.gnu.org/licenses/gpl-3.0.html
+
+================================================================================
+  SUMMARY OF YOUR RIGHTS AND OBLIGATIONS (informational, not the license)
+================================================================================
+
+  * The lamejs library is shipped UNMODIFIED in this distribution as the
+    file `lamejs.iife.js`. The rest of this web app (`index.html`, etc.)
+    is licensed under the Apache License, Version 2.0; lamejs is a
+    separate, dynamically-linked component loaded by the HTML via a
+    <script> tag. The two licenses coexist under LGPL Section 4 because
+    lamejs is distributed as a separate library file rather than statically
+    linked or modified.
+
+  * You may obtain the source code of lamejs at the upstream repositories
+    listed above. The library is also available from npm under the same
+    package name.
+
+  * You may replace, modify, or upgrade `lamejs.iife.js` -- for example,
+    by dropping in a different build or fork. If you modify it, the
+    modified version must remain under LGPL-3.0-or-later and you must
+    make the modified source available under that license.
+
+  * Nothing in this summary modifies the terms of the LGPL itself; the
+    actual license is the one at the URL above.
+
+================================================================================
+  ORIGINAL LICENSE NOTE FROM THE lamejs PACKAGE
+================================================================================
+
+  Can I use LAME in my commercial program?
+
+  Yes, you can, under the restrictions of the LGPL. The easiest way to do
+  this is to:
+
+    1. Link to LAME as a separate library (lame.min.js / lame.all.js /
+       lamejs.iife.js, etc.).
+
+    2. Fully acknowledge that you are using LAME, and give a link to the
+       lame.sourceforge.net web site.
+
+    3. If you make modifications to LAME, you *must* release those
+       modifications back to the LAME project, under the LGPL.
+
+================================================================================

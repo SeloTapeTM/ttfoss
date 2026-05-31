@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<!--
+  Local Neural TTS Web App
+  Copyright 2026 Omer Daniel <omer.daniel@solaredge.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  ------------------------------------------------------------------------
+  THIRD-PARTY COMPONENTS
+
+  Apache-2.0 components, loaded at runtime from public CDNs:
+    * Kokoro-82M model weights
+        https://huggingface.co/hexgrad/Kokoro-82M
+        https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX
+    * kokoro-js
+        https://github.com/hexgrad/kokoro
+        https://cdn.jsdelivr.net/npm/kokoro-js
+
+  LGPL-3.0-or-later component, BUNDLED locally as a separate file:
+    * lamejs (breezystack fork) MP3 encoder -- lamejs.iife.js
+        https://github.com/breezystack/lamejs
+        https://www.npmjs.com/package/@breezystack/lamejs
+      The library is shipped UNMODIFIED in this distribution as a separate
+      file (lamejs.iife.js) and is loaded by this HTML via a relative
+      <script> tag. See LICENSE.lamejs and NOTICE.
+
+  See accompanying NOTICE, LICENSE, and LICENSE.lamejs files.
+  MODIFICATIONS: derivative work by Omer Daniel <omer.daniel@solaredge.com>; third-party libraries
+  and model weights are unmodified.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Local Neural TTS (Kokoro)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// Theme bootstrap: apply saved/system theme before paint to avoid FOUC.
+(function() {
+  try {
+    var saved = localStorage.getItem('tts-theme');
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var theme = saved || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<style>
+/* Theme tokens — light by default, overridden under [data-theme="dark"] */
+:root {
+  color-scheme: light;
+  --bg: #fafafa;
+  --fg: #1a1a1a;
+  --muted: #666;
+  --card-bg: #fff;
+  --card-border: #e5e5e5;
+  --input-bg: #fff;
+  --input-border: #d4d4d4;
+  --input-fg: #1a1a1a;
+  --code-bg: #eee;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --btn-secondary-bg: #f1f1f3;
+  --btn-secondary-hover: #e4e4e7;
+  --banner-warn-bg: #fef3c7;
+  --banner-warn-border: #fde68a;
+  --banner-warn-fg: #78350f;
+  --banner-ok-bg: #d1fae5;
+  --banner-ok-border: #6ee7b7;
+  --banner-ok-fg: #064e3b;
+  --banner-err-bg: #fee2e2;
+  --banner-err-border: #fca5a5;
+  --banner-err-fg: #7f1d1d;
+  --progress-bg: #f1f1f3;
+  --hr: #eee;
+  --shadow: 0 0 0 0 transparent;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f10;
+  --fg: #e6e6e6;
+  --muted: #9a9a9f;
+  --card-bg: #18181b;
+  --card-border: #2a2a2e;
+  --input-bg: #1f1f23;
+  --input-border: #3a3a3f;
+  --input-fg: #e6e6e6;
+  --code-bg: #27272a;
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --btn-secondary-bg: #27272a;
+  --btn-secondary-hover: #34343a;
+  --banner-warn-bg: #3b2f0f;
+  --banner-warn-border: #6b5712;
+  --banner-warn-fg: #facc15;
+  --banner-ok-bg: #0e2a1f;
+  --banner-ok-border: #166534;
+  --banner-ok-fg: #6ee7b7;
+  --banner-err-bg: #3a1414;
+  --banner-err-border: #7f1d1d;
+  --banner-err-fg: #fecaca;
+  --progress-bg: #2a2a2e;
+  --hr: #2a2a2e;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--fg); transition: background 0.2s, color 0.2s; margin: 0 auto; padding: 24px; max-width: 760px; }
+h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px 0; }
+.subtitle { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+.subtitle code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+.banner { background: var(--banner-warn-bg); border: 1px solid var(--banner-warn-border); color: var(--banner-warn-fg); padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+.banner.ok { background: var(--banner-ok-bg); border-color: var(--banner-ok-border); color: var(--banner-ok-fg); }
+.banner.err { background: var(--banner-err-bg); border-color: var(--banner-err-border); color: var(--banner-err-fg); }
+textarea { width: 100%; min-height: 130px; padding: 12px; font-size: 14px; font-family: inherit; border: 1px solid var(--input-border); border-radius: 8px; resize: vertical; background: var(--input-bg); color: var(--input-fg); }
+textarea:focus { outline: none; border-color: var(--accent); }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.control { display: flex; flex-direction: column; gap: 6px; }
+.control.wide { grid-column: 1 / -1; }
+label { font-size: 12px; font-weight: 500; color: var(--fg); display: flex; justify-content: space-between; }
+label span.val { color: var(--accent); font-variant-numeric: tabular-nums; }
+select { padding: 8px 10px; border: 1px solid var(--input-border); border-radius: 6px; font-size: 13px; background: var(--input-bg); color: var(--input-fg); font-family: inherit; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.btn-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+button { padding: 10px 18px; font-size: 14px; font-weight: 500; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; }
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-secondary { background: var(--btn-secondary-bg); color: var(--fg); }
+.btn-secondary:hover:not(:disabled) { background: var(--btn-secondary-hover); }
+.status { font-size: 12px; color: var(--muted); margin-top: 10px; min-height: 16px; }
+.progress { height: 6px; background: var(--progress-bg); border-radius: 3px; overflow: hidden; margin-top: 8px; display: none; }
+.progress.show { display: block; }
+.progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.2s; }
+audio { width: 100%; margin-top: 14px; }
+.char-count { font-size: 11px; color: var(--muted); text-align: right; margin-top: 4px; }
+details { margin-top: 12px; font-size: 12px; color: var(--muted); }
+details summary { cursor: pointer; user-select: none; font-weight: 500; }
+details p, details li { margin: 8px 0; line-height: 1.55; }
+details ul { padding-left: 18px; }
+.legal { font-size: 11px; color: var(--muted); text-align: center; padding: 12px 0 24px; line-height: 1.5; }
+.legal a { color: var(--accent); text-decoration: none; }
+.legal a:hover { text-decoration: underline; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.theme-toggle {
+  background: var(--btn-secondary-bg);
+  color: var(--fg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+.theme-toggle:hover { background: var(--btn-secondary-hover); }
+.page-header h1 { margin: 0; }
+</style>
+</head>
+<body>
+<div class="page-header">
+  <h1>Local Neural TTS</h1>
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle light/dark theme">🌙</button>
+</div>
+<div class="subtitle">Runs Kokoro-82M entirely in your browser via <code>kokoro-js</code>. First run downloads ~300 MB; afterwards it's cached and offline.</div>
+
+<div id="banner" class="banner">Click <b>Load model</b> to begin. Best in Chrome/Edge with WebGPU enabled.</div>
+
+<div class="card">
+  <textarea id="text" placeholder="Type something to speak...">Hello! This is Kokoro, an open source neural text to speech model running entirely on your computer. No data leaves your browser.</textarea>
+  <div class="char-count"><span id="count">0</span> characters</div>
+
+  <div class="controls">
+    <div class="control wide">
+      <label>Voice</label>
+      <select id="voice" disabled><option>-- load model first --</option></select>
+    </div>
+    <div class="control">
+      <label>Speed <span class="val" id="speedVal">1.0</span></label>
+      <input type="range" id="speed" min="0.5" max="2" step="0.1" value="1">
+    </div>
+    <div class="control">
+      <label>Compute</label>
+      <select id="device">
+        <option value="webgpu">WebGPU (fastest)</option>
+        <option value="wasm">WASM (compatibility)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-secondary" id="loadBtn">Load model</button>
+    <button class="btn-primary" id="speakBtn" disabled>Speak</button>
+    <button class="btn-secondary" id="downloadWavBtn" disabled>Save .wav</button>
+    <button class="btn-secondary" id="downloadMp3Btn" disabled title="Encode the generated audio to MP3 (192 kbps stereo) in your browser using the bundled lamejs library.">Save .mp3</button>
+  </div>
+  <div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="status" id="status">Idle.</div>
+
+  <audio id="audio" controls style="display:none"></audio>
+
+  <details>
+    <summary>About / License</summary>
+    <p><b>What this is:</b> A static HTML wrapper around the <a href="https://github.com/hexgrad/kokoro" target="_blank" rel="noopener">kokoro-js</a> library, which runs the <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" rel="noopener">Kokoro-82M</a> neural TTS model directly in your browser.</p>
+    <p><b>Privacy:</b> Audio is generated locally. Your text and the audio are not sent to any server. The only network activity is the one-time download of model weights from the HuggingFace CDN.</p>
+    <p><b>First run:</b> Downloads the ONNX model + tokenizer (~300 MB) from <code>https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX</code>. Subsequent runs use the cached copy.</p>
+    <p><b>Requirements:</b> Modern Chromium browser. WebGPU: Chrome/Edge 113+. Falls back to WebAssembly if WebGPU is unavailable.</p>
+    <p><b>MP3 export:</b> Performed locally in your browser by the bundled <a href="https://github.com/breezystack/lamejs" target="_blank" rel="noopener">lamejs</a> library (file <code>lamejs.iife.js</code> in this folder). No network call. 192 kbps stereo.</p>
+    <hr style="border:none;border-top:1px solid var(--hr);margin:14px 0">
+    <p><b>License -- this web app:</b> Copyright 2026 Omer Daniel (omer.daniel@solaredge.com). Licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License, Version 2.0</a>. See <code>LICENSE</code> and <code>NOTICE</code>.</p>
+    <p><b>Third-party components:</b></p>
+    <ul>
+      <li><b>Kokoro-82M</b> model weights -- Apache 2.0. Copyright 2024-2025 hexgrad and contributors. Loaded at runtime from HuggingFace. <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" rel="noopener">Source</a> / <a href="https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX" target="_blank" rel="noopener">ONNX build used here</a>.</li>
+      <li><b>kokoro-js</b> -- Apache 2.0. Copyright 2024-2025 the kokoro-js authors. Loaded at runtime from <code>cdn.jsdelivr.net/npm/kokoro-js@1.2.0</code>. <a href="https://github.com/hexgrad/kokoro" target="_blank" rel="noopener">Source</a>.</li>
+      <li><b>lamejs (breezystack fork)</b> -- <a href="https://www.gnu.org/licenses/lgpl-3.0.html" target="_blank" rel="noopener">LGPL-3.0-or-later</a>. Author Alex Zhukov and contributors. <b>BUNDLED</b> here as the file <code>lamejs.iife.js</code>, shipped unmodified. <a href="https://github.com/breezystack/lamejs" target="_blank" rel="noopener">Source</a>. See <code>LICENSE.lamejs</code> for the LGPL terms. You may replace <code>lamejs.iife.js</code> with a newer version of the same library without modifying the rest of this app.</li>
+    </ul>
+    <p><b>Modifications:</b> This file is a derivative work providing a UI around kokoro-js. kokoro-js, lamejs, and the Kokoro-82M weights are unmodified.</p>
+    <p><b>Disclaimer:</b> Distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.</p>
+  </details>
+</div>
+
+<div class="legal">
+  Local Neural TTS -- Apache 2.0. Bundled
+  <a href="https://github.com/breezystack/lamejs" target="_blank" rel="noopener">lamejs</a> (LGPL-3.0). Uses
+  <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank" rel="noopener">Kokoro-82M</a> via
+  <a href="https://github.com/hexgrad/kokoro" target="_blank" rel="noopener">kokoro-js</a>.
+  See <code>LICENSE</code>, <code>LICENSE.lamejs</code>, <code>NOTICE</code>.
+</div>
+
+<!-- LGPL-3.0-or-later: bundled lamejs MP3 encoder, loaded unmodified from a local file. -->
+<script src="lamejs.iife.js"></script>
+<script type="module">
+// Dark-mode toggle
+(function() {
+  var btn = document.getElementById('themeToggle');
+  function setIcon() {
+    var t = document.documentElement.getAttribute('data-theme');
+    btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  setIcon();
+  btn.addEventListener('click', function() {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('tts-theme', next); } catch (e) {}
+    setIcon();
+  });
+})();
+
+const banner = document.getElementById('banner');
+const textEl = document.getElementById('text');
+const voiceSel = document.getElementById('voice');
+const speed = document.getElementById('speed');
+const speedVal = document.getElementById('speedVal');
+const deviceSel = document.getElementById('device');
+const loadBtn = document.getElementById('loadBtn');
+const speakBtn = document.getElementById('speakBtn');
+const downloadWavBtn = document.getElementById('downloadWavBtn');
+const downloadMp3Btn = document.getElementById('downloadMp3Btn');
+const statusEl = document.getElementById('status');
+const progress = document.getElementById('progress');
+const progressBar = document.getElementById('progressBar');
+const audio = document.getElementById('audio');
+const count = document.getElementById('count');
+
+let tts = null;
+let lastWavBlob = null;
+let lastMp3Blob = null;
+let lastPcm = null;
+let lastSampleRate = 24000;
+
+function setBanner(msg, cls) {
+  banner.textContent = msg;
+  banner.className = 'banner' + (cls ? ' ' + cls : '');
+}
+function updateCount() { count.textContent = textEl.value.length; }
+updateCount();
+textEl.addEventListener('input', updateCount);
+speed.addEventListener('input', function() { speedVal.textContent = (+speed.value).toFixed(1); });
+
+loadBtn.addEventListener('click', async function() {
+  loadBtn.disabled = true;
+  progress.classList.add('show');
+  statusEl.textContent = 'Loading kokoro-js...';
+  setBanner('Loading model -- this may take a few minutes on first run.');
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/dist/kokoro.web.js');
+    const KokoroTTS = mod.KokoroTTS;
+    const device = deviceSel.value;
+    statusEl.textContent = 'Downloading model weights (' + device + ')...';
+    tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+      dtype: device === 'webgpu' ? 'fp32' : 'q8',
+      device: device,
+      progress_callback: function(p) {
+        if (p.status === 'progress' && p.total) {
+          const pct = (p.loaded / p.total) * 100;
+          progressBar.style.width = pct + '%';
+          statusEl.textContent = 'Downloading ' + (p.file || '') + ': ' + (p.loaded/1e6).toFixed(1) + ' / ' + (p.total/1e6).toFixed(1) + ' MB';
+        } else if (p.status === 'done') {
+          statusEl.textContent = 'Loaded ' + (p.file || '');
+        }
+      }
+    });
+    const voices = tts.voices;
+    voiceSel.innerHTML = '';
+    Object.entries(voices).forEach(function(entry) {
+      const id = entry[0], info = entry[1];
+      const opt = document.createElement('option');
+      opt.value = id;
+      const langMap = { 'en-us':'EN-US','en-gb':'EN-GB','ja':'JA','zh':'ZH','es':'ES','fr':'FR','hi':'HI','it':'IT','pt-br':'PT-BR' };
+      const lang = langMap[info.language] || (info.language || '??').toUpperCase();
+      const gender = info.gender === 'Male' ? 'M' : 'F';
+      opt.textContent = '[' + lang + '] ' + gender + ' -- ' + info.name + ' (' + id + ')';
+      voiceSel.appendChild(opt);
+    });
+    voiceSel.disabled = false;
+    if (voices['af_heart']) voiceSel.value = 'af_heart';
+    speakBtn.disabled = false;
+    progress.classList.remove('show');
+    progressBar.style.width = '0%';
+    statusEl.textContent = 'Model ready.';
+    setBanner('Model loaded (' + device + '). ' + Object.keys(voices).length + ' voices available.', 'ok');
+  } catch (err) {
+    console.error(err);
+    progress.classList.remove('show');
+    statusEl.textContent = 'Load failed: ' + err.message;
+    setBanner('Failed to load model: ' + err.message + ' -- try switching to WASM if WebGPU is unavailable.', 'err');
+    loadBtn.disabled = false;
+  }
+});
+
+speakBtn.addEventListener('click', async function() {
+  const text = textEl.value.trim();
+  if (!text || !tts) return;
+  speakBtn.disabled = true;
+  downloadWavBtn.disabled = true;
+  downloadMp3Btn.disabled = true;
+  statusEl.textContent = 'Generating audio...';
+  const t0 = performance.now();
+  try {
+    const result = await tts.generate(text, { voice: voiceSel.value, speed: +speed.value });
+    let pcm = null, sr = 24000;
+    if (result.audio && result.sampling_rate) { pcm = result.audio; sr = result.sampling_rate; }
+    else if (typeof result.toWav === 'function') {
+      lastWavBlob = new Blob([result.toWav()], { type: 'audio/wav' });
+      const dec = decodeWavToFloat32(result.toWav());
+      pcm = dec.samples; sr = dec.sampleRate;
+    }
+    else throw new Error('Unknown audio output format');
+    lastPcm = pcm;
+    lastSampleRate = sr;
+    lastWavBlob = pcmToWavBlob(pcm, sr);
+    lastMp3Blob = null;
+    audio.src = URL.createObjectURL(lastWavBlob);
+    audio.style.display = 'block';
+    audio.play();
+    const dt = ((performance.now() - t0) / 1000).toFixed(1);
+    statusEl.textContent = 'Done in ' + dt + 's.';
+    downloadWavBtn.disabled = false;
+    downloadMp3Btn.disabled = false;
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = 'Error: ' + err.message;
+  } finally {
+    speakBtn.disabled = false;
+  }
+});
+
+downloadWavBtn.addEventListener('click', function() {
+  if (!lastWavBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastWavBlob);
+  a.download = 'kokoro-tts.wav';
+  a.click();
+});
+
+downloadMp3Btn.addEventListener('click', async function() {
+  if (!lastPcm) return;
+  if (!lastMp3Blob) {
+    downloadMp3Btn.disabled = true;
+    const prev = statusEl.textContent;
+    statusEl.textContent = 'Encoding MP3...';
+    try {
+      lastMp3Blob = await encodePcmToMp3Blob(lastPcm, lastSampleRate, 192);
+      statusEl.textContent = prev;
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'MP3 encode failed: ' + err.message;
+      downloadMp3Btn.disabled = false;
+      return;
+    }
+    downloadMp3Btn.disabled = false;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(lastMp3Blob);
+  a.download = 'kokoro-tts.mp3';
+  a.click();
+});
+
+async function encodePcmToMp3Blob(samples, sampleRate, kbps) {
+  if (typeof lamejs === 'undefined' || !lamejs.Mp3Encoder) {
+    throw new Error('lamejs.iife.js did not load -- the file must be next to index.html');
+  }
+  // Kokoro outputs mono Float32. We convert to Int16 and feed the same
+  // buffer to both channels of the stereo MP3 encoder so the resulting
+  // file is a true stereo MP3 (both channels identical).
+  const int16 = new Int16Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  const enc = new lamejs.Mp3Encoder(2, sampleRate, kbps); // 2 = stereo
+  const block = 1152;
+  const chunks = [];
+  for (let i = 0; i < int16.length; i += block) {
+    const left = int16.subarray(i, i + block);
+    const right = left; // mono source -> duplicate to right channel
+    const buf = enc.encodeBuffer(left, right);
+    if (buf.length > 0) chunks.push(buf);
+    if ((i / block) % 200 === 0) await new Promise(function(r) { setTimeout(r, 0); });
+  }
+  const tail = enc.flush();
+  if (tail.length > 0) chunks.push(tail);
+  return new Blob(chunks, { type: 'audio/mpeg' });
+}
+
+function decodeWavToFloat32(bytes) {
+  const view = new DataView(bytes.buffer || new Uint8Array(bytes).buffer);
+  const sampleRate = view.getUint32(24, true);
+  let p = 12;
+  while (p < view.byteLength - 8) {
+    const id = String.fromCharCode(view.getUint8(p), view.getUint8(p+1), view.getUint8(p+2), view.getUint8(p+3));
+    const sz = view.getUint32(p + 4, true);
+    if (id === 'data') { p += 8; break; }
+    p += 8 + sz;
+  }
+  const n = (view.byteLength - p) / 2;
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = view.getInt16(p + i * 2, true) / 0x8000;
+  return { samples: out, sampleRate: sampleRate };
+}
+
+function pcmToWavBlob(samples, sampleRate) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+</script>
+</body>
+</html>

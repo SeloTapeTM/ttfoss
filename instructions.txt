@@ -1,0 +1,122 @@
+================================================================================
+  LOCAL NEURAL TTS -- QUICK START
+================================================================================
+
+  Copyright 2026 Omer Daniel <omer.daniel@solaredge.com>
+  Licensed under the Apache License, Version 2.0. See LICENSE.
+
+WHAT THIS IS
+------------
+A text-to-speech web app that runs a neural voice model (Kokoro-82M)
+entirely in your browser. No accounts, no API keys, no data leaves your
+machine after the first download. MP3 encoding also runs locally.
+
+
+REQUIREMENTS
+------------
+* Chrome, Edge, Brave, Opera, or Arc (any modern Chromium browser).
+  Version 113 or newer recommended for WebGPU acceleration.
+* ~300 MB of free disk space for the model cache.
+* Internet connection ON FIRST RUN ONLY (to download the model weights).
+
+
+HOW TO RUN -- OPTION A: DOUBLE-CLICK (SIMPLEST)
+-----------------------------------------------
+1. Unzip this folder anywhere on your computer.
+2. Double-click `index.html`. It opens in your default browser.
+3. If your default browser is NOT Chromium-based, right-click
+   `index.html` -> Open With -> choose Chrome / Edge / Brave.
+4. Continue to "USING THE APP" below.
+
+   NOTE: A few browser/OS combinations restrict ES module imports
+   from file:// URLs. If clicking "Load model" does nothing or shows
+   a CORS error in the console, use Option B instead.
+
+
+HOW TO RUN -- OPTION B: LOCAL HTTP SERVER (MOST RELIABLE)
+---------------------------------------------------------
+From a terminal/PowerShell inside the unzipped folder:
+
+   Python 3:
+       python -m http.server 8000
+
+   Node.js (if you have npx):
+       npx --yes serve -l 8000
+
+Then open http://localhost:8000 in Chrome or Edge.
+
+
+USING THE APP
+-------------
+1. Click "Load model".
+   - First time: downloads ~300 MB. Takes 1-5 minutes.
+   - After that: loads from the browser cache in a few seconds.
+2. Pick a voice from the dropdown (~50 available, multiple languages).
+3. Adjust speed (0.5x - 2x) if you like.
+4. Type or paste text into the box.
+5. Click "Speak". Audio plays automatically.
+6. Save the audio:
+     - "Save .wav" -> uncompressed WAV, instant.
+     - "Save .mp3" -> encodes to 192 kbps stereo MP3 locally using the
+       bundled `lamejs.iife.js`. Takes a couple of seconds for typical
+       clips, no network call.
+
+
+TROUBLESHOOTING
+---------------
+* Nothing happens when I click "Load model":
+    -> You may be opening the file via file://. Use Option B above
+       (local HTTP server). Open the browser console (F12) for errors.
+
+* "Failed to load model" with a WebGPU error:
+    -> Change the "Compute" dropdown to "WASM (compatibility)" and
+       click Load model again. Slower, but works on any browser.
+
+* "Save .mp3" fails with "lamejs.iife.js did not load":
+    -> Make sure `lamejs.iife.js` is in the same folder as
+       `index.html`. The HTML loads it with a relative <script> tag.
+
+* First run is very slow / appears stuck:
+    -> The model is ~300 MB. Give it a few minutes. The progress
+       bar updates as files arrive.
+
+
+FILES IN THIS PACKAGE
+---------------------
+   index.html        The web app -- open this in your browser.
+   lamejs.iife.js    Bundled MP3 encoder (LGPL-3.0). Shipped unmodified.
+   INSTRUCTIONS.txt  This file.
+   README.md         Same info as this file, in Markdown.
+   LICENSE           Apache License, Version 2.0 (full text).
+   LICENSE.lamejs    LGPL-3.0 notice for the bundled lamejs.iife.js.
+   NOTICE            Required third-party attribution notices.
+
+
+PRIVACY
+-------
+All speech generation and MP3 encoding run locally in your browser.
+Your text and the generated audio are never sent to any server. The
+only network activity is the one-time download of the model from
+the HuggingFace public CDN.
+
+
+LICENSE
+-------
+This web app's own code (`index.html` and docs) is licensed under the
+Apache License, Version 2.0 (see LICENSE). It bundles:
+
+   * lamejs.iife.js -- the lamejs MP3 encoder, version 1.2.7 (breezystack
+     fork). Licensed under LGPL-3.0-or-later. Shipped UNMODIFIED. See
+     LICENSE.lamejs. Source: https://github.com/breezystack/lamejs
+
+And loads at runtime (not bundled) under Apache-2.0:
+
+   * Kokoro-82M model weights
+       https://huggingface.co/hexgrad/Kokoro-82M
+       https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX
+   * kokoro-js
+       https://github.com/hexgrad/kokoro
+
+Full attribution is in NOTICE.
+
+================================================================================
