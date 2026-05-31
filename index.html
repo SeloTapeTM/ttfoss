@@ -193,6 +193,16 @@ details ul { padding-left: 18px; }
 .theme-toggle { background: var(--btn-secondary-bg); color: var(--fg); border: 1px solid var(--card-border); border-radius: 8px; padding: 8px 12px; font-size: 16px; cursor: pointer; line-height: 1; }
 .theme-toggle:hover { background: var(--btn-secondary-hover); }
 .page-header h1 { margin: 0; }
+/* tabs */
+.tab-bar { display: flex; border-bottom: 1px solid var(--card-border); margin-bottom: 16px; }
+.tab { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; padding: 7px 14px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
+.tab:hover:not(.tab-active) { color: var(--fg); }
+.tab:active { transform: none; }
+.tab.tab-active { color: var(--accent); border-bottom-color: var(--accent); }
+.how-to { font-size: 13px; line-height: 1.7; }
+.how-to ol { padding-left: 20px; margin: 0 0 12px; }
+.how-to li { margin: 6px 0; }
+.how-to .note { font-size: 12px; color: var(--muted); margin: 0; padding-top: 10px; border-top: 1px solid var(--hr); }
 /* history */
 .history-heading { font-size: 12px; font-weight: 600; color: var(--fg); margin: 0 0 10px; }
 .history-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--hr); }
@@ -214,6 +224,25 @@ details ul { padding-left: 18px; }
 <div id="banner" class="banner">Click <b>Load model</b> to begin. Best in Chrome/Edge with WebGPU enabled.</div>
 
 <div class="card">
+  <div class="tab-bar">
+    <button class="tab tab-active" id="tabGenerate">Generate</button>
+    <button class="tab" id="tabHelp">How to use</button>
+  </div>
+
+  <div id="panelHelp" style="display:none" class="how-to">
+    <ol>
+      <li><b>Load model</b> — click once. Downloads ~300 MB on first run, then cached offline.</li>
+      <li><b>Pick a voice</b> — choose from ~50 voices across 10 languages in the Voice dropdown.</li>
+      <li><b>Enter text</b> — type in the box, or drag &amp; drop a <code>.txt</code> file onto it.</li>
+      <li><b>Speak</b> — click <b>Speak</b> or press <code>Ctrl+Enter</code>. Long texts are chunked automatically.</li>
+      <li><b>Adjust playback</b> — the Playback speed slider changes how fast the audio plays, without regenerating.</li>
+      <li><b>Export</b> — save as <b>WAV</b> (lossless) or <b>MP3</b> (192 kbps, encoded in your browser).</li>
+      <li><b>History</b> — last 5 clips appear in a Recent clips card below; each has its own player and download.</li>
+    </ol>
+    <p class="note">Everything runs locally. No audio or text is ever sent to a server.</p>
+  </div>
+
+  <div id="panelGenerate">
   <textarea id="text" placeholder="Type something to speak, or drop a .txt file here…" title="Type text or drop a .txt file">Hello! This is Kokoro, an open source neural text to speech model running entirely on your computer. No data leaves your browser.</textarea>
   <div class="char-count"><span id="count">0</span> characters</div>
 
@@ -270,6 +299,7 @@ details ul { padding-left: 18px; }
     <p><b>Modifications:</b> This file is a derivative work providing a UI around kokoro-js. kokoro-js, lamejs, and the Kokoro-82M weights are unmodified.</p>
     <p><b>Disclaimer:</b> Distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND. <span id="eggTrigger" aria-hidden="true">✦</span></p>
   </details>
+  </div><!-- /panelGenerate -->
 </div>
 
 <div id="historySection" class="card" style="display:none">
@@ -320,6 +350,22 @@ details ul { padding-left: 18px; }
       setIcon();
     });
   }
+})();
+
+// Tab switching
+(function() {
+  var tabGenerate   = document.getElementById('tabGenerate');
+  var tabHelp       = document.getElementById('tabHelp');
+  var panelGenerate = document.getElementById('panelGenerate');
+  var panelHelp     = document.getElementById('panelHelp');
+  tabGenerate.addEventListener('click', function() {
+    tabGenerate.classList.add('tab-active');   tabHelp.classList.remove('tab-active');
+    panelGenerate.style.display = '';          panelHelp.style.display = 'none';
+  });
+  tabHelp.addEventListener('click', function() {
+    tabHelp.classList.add('tab-active');       tabGenerate.classList.remove('tab-active');
+    panelHelp.style.display = '';              panelGenerate.style.display = 'none';
+  });
 })();
 
 // DOM refs
