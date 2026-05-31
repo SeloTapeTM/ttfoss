@@ -202,11 +202,6 @@ details ul { padding-left: 18px; }
 .h-voice { font-size: 11px; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .h-text { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .btn-icon { padding: 6px 10px; font-size: 13px; flex-shrink: 0; }
-/* compare */
-.compare-voices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
-.compare-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
-.compare-result-label { font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.compare-result audio { width: 100%; height: 36px; margin: 0; }
 </style>
 </head>
 <body>
@@ -255,28 +250,6 @@ details ul { padding-left: 18px; }
 
   <audio id="audio" controls style="display:none"></audio>
   <canvas id="waveform"></canvas>
-
-  <details id="compareSection">
-    <summary>Compare voices</summary>
-    <div class="compare-voices">
-      <div class="control">
-        <label>Voice A</label>
-        <select id="compareVoiceA" disabled><option>-- load model first --</option></select>
-      </div>
-      <div class="control">
-        <label>Voice B</label>
-        <select id="compareVoiceB" disabled><option>-- load model first --</option></select>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button id="compareBtn" class="btn-secondary" disabled>Generate comparison</button>
-    </div>
-    <div class="status" id="compareStatus"></div>
-    <div id="compareResults" class="compare-results" style="display:none">
-      <div id="compareA"></div>
-      <div id="compareB"></div>
-    </div>
-  </details>
 
   <details>
     <summary>About / License</summary>
@@ -368,11 +341,6 @@ const progressBar      = document.getElementById('progressBar');
 const audio            = document.getElementById('audio');
 const count            = document.getElementById('count');
 const waveformCanvas   = document.getElementById('waveform');
-const compareVoiceASel = document.getElementById('compareVoiceA');
-const compareVoiceBSel = document.getElementById('compareVoiceB');
-const compareBtn       = document.getElementById('compareBtn');
-const compareStatusEl  = document.getElementById('compareStatus');
-const compareResultsEl = document.getElementById('compareResults');
 const historySection   = document.getElementById('historySection');
 const historyList      = document.getElementById('historyList');
 
@@ -601,14 +569,6 @@ loadBtn.addEventListener('click', async function() {
     const savedVoice = (() => { try { return localStorage.getItem('tts-voice'); } catch(e) { return null; } })();
     populateVoiceSelect(voiceSel, allVoices, savedVoice);
 
-    const voiceAId = voiceSel.value;
-    const bCandidates = ['bm_george', 'am_adam', 'bm_lewis', 'af_bella', 'af_sky'];
-    const defaultB = bCandidates.find(c => allVoices[c] && c !== voiceAId)
-      || Object.keys(allVoices).find(k => k !== voiceAId);
-    populateVoiceSelect(compareVoiceASel, allVoices, voiceAId);
-    populateVoiceSelect(compareVoiceBSel, allVoices, defaultB);
-    compareBtn.disabled = false;
-
     speakBtn.disabled = false;
     progress.classList.remove('show');
     progressBar.style.width = '0%';
@@ -698,44 +658,6 @@ downloadMp3Btn.addEventListener('click', async function() {
   a.href = URL.createObjectURL(lastMp3Blob);
   a.download = 'kokoro-tts.mp3';
   a.click();
-});
-
-// ── Compare voices ────────────────────────────────────────────────────────
-
-compareBtn.addEventListener('click', async function() {
-  const text = textEl.value.trim();
-  if (!text || !tts) return;
-  compareBtn.disabled = true;
-  compareStatusEl.textContent = 'Generating both voices…';
-  compareResultsEl.style.display = 'none';
-  try {
-    const [resA, resB] = await Promise.all([
-      generateAudio(text, compareVoiceASel.value, +speed.value, null),
-      generateAudio(text, compareVoiceBSel.value, +speed.value, null)
-    ]);
-
-    function renderSlot(containerId, sel, wavBlob) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = '';
-      const lbl = document.createElement('div');
-      lbl.className = 'compare-result-label';
-      lbl.textContent = sel.options[sel.selectedIndex]?.textContent || sel.value;
-      const aud = document.createElement('audio');
-      aud.controls = true;
-      aud.src = URL.createObjectURL(wavBlob);
-      container.append(lbl, aud);
-    }
-
-    renderSlot('compareA', compareVoiceASel, resA.wavBlob);
-    renderSlot('compareB', compareVoiceBSel, resB.wavBlob);
-    compareResultsEl.style.display = 'grid';
-    compareStatusEl.textContent = '';
-  } catch(err) {
-    console.error(err);
-    compareStatusEl.textContent = 'Error: ' + err.message;
-  } finally {
-    compareBtn.disabled = false;
-  }
 });
 
 // ── Audio utilities ───────────────────────────────────────────────────────
