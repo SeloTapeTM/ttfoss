@@ -1,0 +1,11 @@
+# Enforce LF line endings in the repository for all text files,
+# regardless of contributor OS or core.autocrlf setting.
+* text=auto eol=lf
+
+*.html text eol=lf
+*.js   text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# Binary files — no line-ending conversion
+*.iife.js binary
