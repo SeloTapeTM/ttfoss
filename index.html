@@ -432,21 +432,63 @@ function chunkText(text) {
   return chunks.length > 1 ? chunks : [text];
 }
 
+// Language metadata: flag + display name, plus the order groups appear in.
+const LANGS = {
+  'en-us': { flag: '🇺🇸', name: 'English (US)' },
+  'en-gb': { flag: '🇬🇧', name: 'English (UK)' },
+  'fr':    { flag: '🇫🇷', name: 'French' },
+  'es':    { flag: '🇪🇸', name: 'Spanish' },
+  'it':    { flag: '🇮🇹', name: 'Italian' },
+  'pt-br': { flag: '🇧🇷', name: 'Portuguese (Brazil)' },
+  'hi':    { flag: '🇮🇳', name: 'Hindi' },
+  'ja':    { flag: '🇯🇵', name: 'Japanese' },
+  'zh':    { flag: '🇨🇳', name: 'Chinese' }
+};
+const LANG_ORDER = Object.keys(LANGS);
+
+function langMeta(code) {
+  return LANGS[code] || { flag: '🌐', name: (code || 'Other').toUpperCase() };
+}
+
 function makeVoiceLabel(id, info) {
-  const langMap = { 'en-us':'EN-US','en-gb':'EN-GB','ja':'JA','zh':'ZH','es':'ES','fr':'FR','hi':'HI','it':'IT','pt-br':'PT-BR' };
-  const lang = langMap[info.language] || (info.language || '??').toUpperCase();
-  const gender = info.gender === 'Male' ? 'M' : 'F';
-  return '[' + lang + '] ' + gender + ' – ' + info.name + ' (' + id + ')';
+  const gender = info.gender === 'Male' ? '♂' : '♀';
+  return gender + ' ' + info.name + ' (' + id + ')';
 }
 
 function populateVoiceSelect(sel, voices, preferredId) {
   sel.innerHTML = '';
+
+  // Bucket voices by language code.
+  const byLang = {};
   Object.entries(voices).forEach(function([id, info]) {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = makeVoiceLabel(id, info);
-    sel.appendChild(opt);
+    const code = info.language || 'other';
+    (byLang[code] = byLang[code] || []).push([id, info]);
   });
+
+  // Emit groups in a stable, sensible order (known languages first, then any extras).
+  const codes = Object.keys(byLang).sort(function(a, b) {
+    const ia = LANG_ORDER.indexOf(a), ib = LANG_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b);
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
+  });
+
+  codes.forEach(function(code) {
+    const meta = langMeta(code);
+    const group = document.createElement('optgroup');
+    group.label = meta.flag + '  ' + meta.name + ' (' + byLang[code].length + ')';
+    byLang[code]
+      .sort(function(a, b) { return a[1].name.localeCompare(b[1].name); })
+      .forEach(function([id, info]) {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = makeVoiceLabel(id, info);
+        group.appendChild(opt);
+      });
+    sel.appendChild(group);
+  });
+
   sel.disabled = false;
   if (preferredId && voices[preferredId]) sel.value = preferredId;
   else if (voices['af_heart']) sel.value = 'af_heart';
