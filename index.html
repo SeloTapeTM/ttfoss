@@ -446,6 +446,51 @@ const LANGS = {
 };
 const LANG_ORDER = Object.keys(LANGS);
 
+// kokoro-js's `tts.voices` only ever reports the en-us/en-gb voices, even though the
+// Kokoro-82M voice pack (and the .bin files kokoro-js itself ships) also includes these.
+// We merge this table in at load time so the picker — and generation — can reach them.
+const EXTRA_VOICES = {
+  ff_siwis:      { name: 'Siwis',      language: 'fr',    gender: 'Female' },
+  if_sara:       { name: 'Sara',       language: 'it',    gender: 'Female' },
+  im_nicola:     { name: 'Nicola',     language: 'it',    gender: 'Male' },
+  pf_dora:       { name: 'Dora',       language: 'pt-br', gender: 'Female' },
+  pm_alex:       { name: 'Alex',       language: 'pt-br', gender: 'Male' },
+  pm_santa:      { name: 'Santa',      language: 'pt-br', gender: 'Male' },
+  hf_alpha:      { name: 'Alpha',      language: 'hi',    gender: 'Female' },
+  hf_beta:       { name: 'Beta',       language: 'hi',    gender: 'Female' },
+  hm_omega:      { name: 'Omega',      language: 'hi',    gender: 'Male' },
+  hm_psi:        { name: 'Psi',        language: 'hi',    gender: 'Male' },
+  jf_alpha:      { name: 'Alpha',      language: 'ja',    gender: 'Female' },
+  jf_gongitsune: { name: 'Gongitsune', language: 'ja',    gender: 'Female' },
+  jf_nezumi:     { name: 'Nezumi',     language: 'ja',    gender: 'Female' },
+  jf_tebukuro:   { name: 'Tebukuro',   language: 'ja',    gender: 'Female' },
+  jm_kumo:       { name: 'Kumo',       language: 'ja',    gender: 'Male' },
+  zf_xiaobei:    { name: 'Xiaobei',    language: 'zh',    gender: 'Female' },
+  zf_xiaoni:     { name: 'Xiaoni',     language: 'zh',    gender: 'Female' },
+  zf_xiaoxiao:   { name: 'Xiaoxiao',   language: 'zh',    gender: 'Female' },
+  zf_xiaoyi:     { name: 'Xiaoyi',     language: 'zh',    gender: 'Female' },
+  zm_yunjian:    { name: 'Yunjian',    language: 'zh',    gender: 'Male' },
+  zm_yunxi:      { name: 'Yunxi',      language: 'zh',    gender: 'Male' },
+  zm_yunxia:     { name: 'Yunxia',     language: 'zh',    gender: 'Male' },
+  zm_yunyang:    { name: 'Yunyang',    language: 'zh',    gender: 'Male' },
+  ef_dora:       { name: 'Dora',       language: 'es',    gender: 'Female' },
+  em_alex:       { name: 'Alex',       language: 'es',    gender: 'Male' },
+  em_santa:      { name: 'Santa',      language: 'es',    gender: 'Male' }
+};
+
+// kokoro-js's internal `_validate_voice` also rejects any id it doesn't already know about
+// (used by generate()/stream() to derive the single-letter phonemizer language code, which
+// is just the voice id's first letter by convention). Patch the loaded instance so the
+// extra voices above are playable, not just visible in the dropdown.
+function patchExtraVoices(ttsInstance) {
+  const originalValidate = ttsInstance._validate_voice.bind(ttsInstance);
+  ttsInstance._validate_voice = function(id) {
+    if (EXTRA_VOICES.hasOwnProperty(id)) return id.charAt(0);
+    return originalValidate(id);
+  };
+  return Object.assign({}, ttsInstance.voices, EXTRA_VOICES);
+}
+
 function langMeta(code) {
   return LANGS[code] || { flag: '🌐', name: (code || 'Other').toUpperCase() };
 }
@@ -653,7 +698,7 @@ loadBtn.addEventListener('click', async function() {
       }
     });
 
-    allVoices = tts.voices;
+    allVoices = patchExtraVoices(tts);
     const savedVoice = (() => { try { return localStorage.getItem('tts-voice'); } catch(e) { return null; } })();
     populateVoiceSelect(voiceSel, allVoices, savedVoice);
 
